@@ -35,6 +35,10 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+ //OpenMP
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 using namespace std;
 
@@ -299,12 +303,17 @@ void merge_sort(float *A, int n) {
   //Aprovecho el ordenamiento SIMD
   //Funciona de 16 en 16
 
-  if (n<32)//(n < 2)
-    return;   
+  if (n<32) {// o la cantidad de subniveles llega al limite
+  	//uso procesamiento simD
+  	//loadSortKernel(&A[0], &A[1], &A[2], &A[3]);
+  	loadSortKernel(A, A+4, A+8, A+12);
+  	//cout << A[0] << "-" <<A[1] << "-" << A[2] <<"-"<< A[3] << "-----------"<< endl;
+    return;}   
   
   /* Se divide A a 2 arrays A1 y A2 */
   n1 = n / 2;   /* numero de elementos de A1 */
   n2 = n - n1;  /* numero de elementos de A2 */
+
 
   //Se multiplica por 4 para que queden alineados a 16
   A1 = (float*)malloc(sizeof(float)*4 * n1);
@@ -318,9 +327,23 @@ void merge_sort(float *A, int n) {
   for (i = 0; i < n2; i++) {
     A2[i] = A[i+n1];
   }
+
+#pragma omp parallel
+{
+#pragma omp single
+{
+#pragma omp task shared(A1) firstprivate(n1)
+	{
+	merge_sort(A1, n1);}
   /* Llamada recursiva */
-  merge_sort(A1, n1);
+	#pragma omp task shared(A2) firstprivate(n2)
+			{
   merge_sort(A2, n2);
+}
+
+}//fin section
+
+}//fin pragma parallel
 
   /* Merge */
   merge(A1, n1, A2, n2, A);
@@ -481,16 +504,17 @@ int main (int argc, char **argv)
 	//Buffer donde se guardan los floats de entrada
 	float *line =sysReadAligned(nombreEntrada,&largoLista);
 
-	int offset;
 	//Se divide en 16 pues se visitan de a 16 
 	largoLista=largoLista/16;
+	/*
+	int offset;
 	for (int i=0;i<largoLista;i++){
 		offset=i*16;
 
 		//A cada grupo de 16 se le aplica el sortKernel
 		loadSortKernel(&line[offset], &line[offset+4], &line[offset+8], &line[offset+12]);
 	}
-
+	*/
 	//largoLista * 16 ya que es la cantidad total de registros, y no la cantidad total de grupos de 16
 	merge_sort(line, largoLista*16);
 
