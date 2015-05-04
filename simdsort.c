@@ -389,58 +389,14 @@ void loadSortKernel(float * a, float *b, float * c, float * d){
   }
 }  
 
-/**
- * merge_sort()
- * Sort array A with n integers, using merge-sort algorithm.
- * Funcion Merge generica
- **/
-void merge_sort(float *A, int n) {
-  int i;
-  float *A1, *A2;
-  int n1, n2;
-
-  //Aprovecho el ordenamiento SIMD
-  //Funciona de 16 en 16
-
-  if (n<32)//(n < 2)
-    return;   
-  
-  /* Se divide A a 2 arrays A1 y A2 */
-  n1 = n / 2;   /* numero de elementos de A1 */
-  n2 = n - n1;  /* numero de elementos de A2 */
-
-  //Se multiplica por 4 para que queden alineados a 16
-  A1 = (float*)malloc(sizeof(float)*4 * n1);
-  A2 = (float*)malloc(sizeof(float)*4 * n2);
-  
-  /* Se mueve la primera mitad a A1 */
-  for (i =0; i < n1; i++) {
-    A1[i] = A[i];
-  }
-  /* el resto a A2*/
-  for (i = 0; i < n2; i++) {
-    A2[i] = A[i+n1];
-  }
-  /* Llamada recursiva */
-  merge_sort(A1, n1);
-  merge_sort(A2, n2);
-
-  /* Merge */
-  merge(A1, n1, A2, n2, A);
-  free(A1);
-  free(A2);
-}
-
-
 void merge_sort_openMP(float *A, int n, int profundidad) {
   int i;
   float *A1, *A2;
   int n1, n2;
 
-  //Aprovecho el ordenamiento SIMD
-  //Funciona de 16 en 16
 
-  if (profundidad==0) {// o la cantidad de subniveles llega al limite
+  // Cuando la cantidad de subniveles llega al limite
+  if (profundidad==0) {
 
   	//Aplico SIMD /////////////////////////////////////////////////////////
   	int offset;
@@ -452,9 +408,6 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 		//A cada grupo de 16 se le aplica el sortKernel
 		loadSortKernel(A+offset, A+offset+4, A+offset+8, A+offset+12);
 		total=total+16;
-		//listaOffset *infoActual=new listaOffset(i);
-		//datosConjunto.push_back(*infoActual);
-		//delete infoActual;
 	}
 
 	///////////////////////////////////////////////////////////////////////
@@ -465,22 +418,23 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 	A1 = (float*)malloc(sizeof(float)*4 * n);
 	//Lista que se utilizara para hacer el headsort, donde n es la cantidad de listas
 	listaOffset listaHeap[n];
+
 	//Agrego el primer elemento de cada lista a listaHeap
 	for (int i=0,z=0;i<n, z<n/16;i=i+16,z++){
 		listaHeap[z].pos=i;
 		listaHeap[z].cantidadRestante=16;
 		listaHeap[z].valor=*(A+listaHeap[z].posActual());
-		//listaHeap[z].restaCantidad();
-		//total=total-1;
 		}
 
 	int cinta=n-1, tamlistaHeap=n/16;
 	n=n/16;
-
 	//Inicio el monticulo////////////////////////////////////
 	buildheap(listaHeap, tamlistaHeap);
-	int posValorMayor=0, valorPos=0;
+	////////////////////////////////////////////////////////
+
+	//Mientras no se agreguen todos los elementos a la lista temporal A1
 	while(total!=0){
+
 		//intercambio el root por el ultimo
 		swap(listaHeap[0], listaHeap[tamlistaHeap-1]);
 		heapify(listaHeap, tamlistaHeap-1, 0);
@@ -490,38 +444,26 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 
 			//ignoro el ultimo, pues este es el mayor pero no tiene stock
 			tamlistaHeap=tamlistaHeap-1; // ++
-			heapify(listaHeap, tamlistaHeap-1, 0); //++
+			//Intercambio el root por el ultimo
 			swap(listaHeap[0],listaHeap[tamlistaHeap-1]);
-			heapify(listaHeap, tamlistaHeap-1, 0); 
-					//obtengo el valor
+			heapify(listaHeap, tamlistaHeap-1, 0);
+			//obtengo el valor y lo guardo en A1
 			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
+			//Actualizo offset
 			listaHeap[tamlistaHeap-1].restaCantidad();
+			//Actualizo valor
 			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
 			total=total-1;
 			cinta=cinta-1;
-			//actualizo su valor
 
-
-			/*for(int z=0;z<tamlistaHeap;z++){
-				if (listaHeap[z].confirmaCantidad()==false && listaHeap[z].pos>valorPos){
-					posValorMayor=z;
-					valorPos=listaHeap[z].pos;
-				}
-			}
-			//intercambio la posicion encontrada por el primero y disminuyo el tam real en 1 para ignorar el mayor sin stock
-			swap(listaHeap[0],listaHeap[posValorMayor]);
-			//heapify(listaHeap, tamlistaHeap-1, 0);
-			//tamlistaHeap=tamlistaHeap-1; --
-			valorPos=0;
-			posValorMayor=0;*/
 		}
 
 		else{
 		//obtengo el valor
 			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
-		listaHeap[tamlistaHeap-1].restaCantidad();
-		total=total-1;
-		cinta=cinta-1;
+			listaHeap[tamlistaHeap-1].restaCantidad();
+			total=total-1;
+			cinta=cinta-1;
 			//actualizo su valor
 			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
 		}
@@ -529,9 +471,8 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 		buildheap(listaHeap, tamlistaHeap);
 	}
 
-	//////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////
 
-	//Copio los elementos restantes a A1
 	n=n*16;
 	//Por ultimo copio todos los valores de A1 a A
 
@@ -539,14 +480,10 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
     	A[i] = A1[i];
   	}
 
-	//////////////////////////////////////////////////////////////////////
+  	///////////////////////////////////////////////////////////////////////
 
-	//merge_sort(A, n*16);
-
-
-  	//loadSortKernel(A, A+4, A+8, A+12);
     return;}   
-   //cout <<"ciclos intermedios!! :" <<profundidad << endl;
+
   
   /* Se divide A a 2 arrays A1 y A2 */
   n1 = n / 2;   /* numero de elementos de A1 */
@@ -565,16 +502,18 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
   for (i = 0; i < n2; i++) {
     A2[i] = A[i+n1];
   }
-//una hebra declara las tareas, las otras 2 la ejecutan
+
+//Declaracion de zona paralela con 2 hebras
 #pragma omp parallel num_threads(2)
 {
+//Declaracion de task
 #pragma omp single
 {
+	//Se subdivide el problema en 2 tareas recursivas
 #pragma omp task shared(A1) firstprivate(n1, profundidad)
 	{
 	merge_sort_openMP(A1, n1, profundidad-1);
 	}
-  /* Llamada recursiva */
 	#pragma omp task  shared(A2) firstprivate(n2, profundidad)
 			{
   merge_sort_openMP(A2, n2,profundidad-1);
@@ -582,7 +521,7 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 
 }//fin single
 #pragma omp taskwait
-}//fin pragma parallel
+}//fin zona paralela
 
   /* Merge */
   merge(A1, n1, A2, n2, A);
@@ -753,23 +692,13 @@ int main (int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////
 
-	////////////////MultiWay Merge Sort//////////////////////////////
+	////////////////MultiWay Merge Sort OPEN_MP//////////////////////////////
 
 	//Buffer donde se guardan los floats de entrada
 	float *line =sysReadAligned(nombreEntrada,&largoLista);
 
-	//Se divide en 16 pues se visitan de a 16 
 	largoLista=largoLista/16;
-	/*
-	int offset;
-	for (int i=0;i<largoLista;i++){
-		offset=i*16;
 
-		//A cada grupo de 16 se le aplica el sortKernel
-		loadSortKernel(&line[offset], &line[offset+4], &line[offset+8], &line[offset+12]);
-	}
-	*/
-	//largoLista * 16 ya que es la cantidad total de registros, y no la cantidad total de grupos de 16
 	merge_sort_openMP(line, largoLista*16, profundidad);
 
 	/////////////////////////////////////////////////////////////////
