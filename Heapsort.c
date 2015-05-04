@@ -48,6 +48,8 @@ using namespace std;
 
 /////////////////////////////////////////
 
+
+
 const int Max = 20;
 
 typedef float IntArrayType[Max];
@@ -61,7 +63,7 @@ void Print(IntArrayType IntArray, int Count)
    {
 
    for (int k = 0; k < Count; k++)
-      cout << setw(5) << IntArray[k];
+      cout << IntArray[k] << " - ";
 
    cout << endl;
    }
@@ -96,7 +98,7 @@ class HeapClass
 
    if (cantidad <= 0)
       {
-      cerr << "Cannot construct a heap with size 0 or less." << endl;
+      cerr << "No se puede construir un monticulo con size 0 o menor." << endl;
       exit(1);
       }
 
@@ -124,11 +126,11 @@ class HeapClass
 
      int Delete(void)
    {
-   int Temp;
+   float Temp;
 
    if (HeapSize == 0)
       {
-      cerr << "Cannot remove from an empty heap" << endl;
+      cerr << "No se puede remover de un monticulo" << endl;
       exit(1);
       }
 
@@ -140,15 +142,12 @@ class HeapClass
    return Temp;
    }
 
-
-
-
       /* Given:  Item   Number to insert into the heap.
            Of course, we also have the implied HeapClass object.
    Task:   To insert Item into the heap so as to maintain it as a heap.
    Return: Nothing directly, but the implied HeapClass object is modified.
 */
-void Insert(int Item)
+void Insert(float Item)
    {
    if (HeapSize == MaxHeapSize)
       {
@@ -163,7 +162,7 @@ void Insert(int Item)
    }
 
    private:
-      int * HeapArrayPtr;   // pointer to array holding the heap data
+      float * HeapArrayPtr;   // pointer to array holding the heap data
       int MaxHeapSize;
       int HeapSize;
 
@@ -178,7 +177,8 @@ void Insert(int Item)
 */
 void FilterDown(int StartIndex)
    {
-   int CurrentPosition, ChildPosition, RightChildPosition, Target;
+   int CurrentPosition, ChildPosition, RightChildPosition;
+   float Target;
 
    CurrentPosition = StartIndex;
    Target = HeapArrayPtr[StartIndex];
@@ -217,7 +217,8 @@ void FilterDown(int StartIndex)
 */
 void FilterUp(int StartIndex)
    {
-   int CurrentPosition, ParentPosition, Target;
+   int CurrentPosition, ParentPosition;
+   float Target;
 
    CurrentPosition = StartIndex;
    ParentPosition = Parent(CurrentPosition);
@@ -261,7 +262,8 @@ void FilterUp(int StartIndex)
 */
 void HeapSort(IntArrayType IntArray, int Count)
    {
-   int Smallest, k;
+   int k;
+   float Smallest;
    HeapClass H(IntArray, Count);  // constructor makes IntArray a heap
 
    for (k = Count - 1; k >= 1; k--)

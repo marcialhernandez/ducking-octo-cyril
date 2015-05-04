@@ -35,6 +35,8 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+#include <math.h>
+#include <vector>
  //OpenMP
 #ifdef _OPENMP
 #include <omp.h>
@@ -42,7 +44,104 @@
 
 using namespace std;
 
-/////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// Estructura que guarda info del offset de cada conjunto, y la cantidad restante de elementos por  //
+// ordenar																							//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct listaOffset{
+	int pos;
+	int cantidadRestante;
+	float valor;
+	//listaOffset(int pos);
+	void restaCantidad();
+	int posActual();
+	bool confirmaCantidad();
+};
+
+/*listaOffset::listaOffset(int posActual){
+	pos=posActual;
+	cantidadRestante=16; //La minima lista es de 16 elementos
+}*/
+
+void listaOffset::restaCantidad(){
+	cantidadRestante=cantidadRestante-1;
+}
+
+int listaOffset::posActual(){
+	int posActual=this->pos+cantidadRestante-1; //quiero el mayor de la lista actual
+	return posActual;
+}
+
+bool listaOffset::confirmaCantidad(){
+	if (cantidadRestante==0){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//Heapsort																							//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void swap(listaOffset& x, listaOffset& y)
+{
+	listaOffset temp;
+	
+	temp = x;
+	x = y;
+	y = temp;
+}
+
+void heapify(listaOffset A[], int heapsize, int root) //(takes O(h) time,
+					// h is the height of root
+{
+	int left = 2*root+1, 
+		right = 2*root +2,
+		largest;
+	
+	if ( (left < heapsize) && (A[left].valor > A[root].valor))
+		largest = left;
+	else 
+		largest = root;
+	
+	if ( (right < heapsize) && (A[right].valor > A[largest].valor))
+		largest = right;
+		
+	if (largest != root)
+	{
+		swap(A[root], A[largest]);
+		heapify(A, heapsize, largest);
+	}
+}
+
+void buildheap(listaOffset A[], int length)	//     (takes O(n) time)
+{	
+	for (int i = floor((length)/2); i >= 0 ; i--)
+		heapify(A, length, i);
+}
+
+
+void heapsort(listaOffset A[], int length)//	       (takes O(n lg n) time)
+{
+	int heapsize = length;
+	
+	buildheap(A, length);	//Take the unsorted list and make it a heap
+	for (int i = length-1; i >=1; i--)
+	{
+		swap(A[0], A[i]);
+		heapsize--;
+		heapify(A, heapsize, 0);		
+	}
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //Funcion que escribe en un archivo de salida de nombre 'nombreSalida'
 //La cantidad 'nBytesToWrite' de datos que contiene el buffer de flotantes 'bufferAEscribir'
@@ -303,12 +402,151 @@ void merge_sort(float *A, int n) {
   //Aprovecho el ordenamiento SIMD
   //Funciona de 16 en 16
 
-  if (n<32) {// o la cantidad de subniveles llega al limite
-  	//uso procesamiento simD
-  	//loadSortKernel(&A[0], &A[1], &A[2], &A[3]);
-  	loadSortKernel(A, A+4, A+8, A+12);
-  	//cout << A[0] << "-" <<A[1] << "-" << A[2] <<"-"<< A[3] << "-----------"<< endl;
+  if (n<32)//(n < 2)
+    return;   
+  
+  /* Se divide A a 2 arrays A1 y A2 */
+  n1 = n / 2;   /* numero de elementos de A1 */
+  n2 = n - n1;  /* numero de elementos de A2 */
+
+  //Se multiplica por 4 para que queden alineados a 16
+  A1 = (float*)malloc(sizeof(float)*4 * n1);
+  A2 = (float*)malloc(sizeof(float)*4 * n2);
+  
+  /* Se mueve la primera mitad a A1 */
+  for (i =0; i < n1; i++) {
+    A1[i] = A[i];
+  }
+  /* el resto a A2*/
+  for (i = 0; i < n2; i++) {
+    A2[i] = A[i+n1];
+  }
+  /* Llamada recursiva */
+  merge_sort(A1, n1);
+  merge_sort(A2, n2);
+
+  /* Merge */
+  merge(A1, n1, A2, n2, A);
+  free(A1);
+  free(A2);
+}
+
+
+void merge_sort_openMP(float *A, int n, int profundidad) {
+  int i;
+  float *A1, *A2;
+  int n1, n2;
+
+  //Aprovecho el ordenamiento SIMD
+  //Funciona de 16 en 16
+
+  if (profundidad==0) {// o la cantidad de subniveles llega al limite
+
+  	//Aplico SIMD /////////////////////////////////////////////////////////
+  	int offset;
+  	int total=0;
+  	n=n/16;
+
+	for (int i=0;i<n;i++){
+		offset=i*16;
+		//A cada grupo de 16 se le aplica el sortKernel
+		loadSortKernel(A+offset, A+offset+4, A+offset+8, A+offset+12);
+		total=total+16;
+		//listaOffset *infoActual=new listaOffset(i);
+		//datosConjunto.push_back(*infoActual);
+		//delete infoActual;
+	}
+
+	///////////////////////////////////////////////////////////////////////
+	//Heapsort
+	///////////////////////////////////////////////////////////////////////
+	//Lista en donde se iran guardando los resultados
+	n=n*16;
+	A1 = (float*)malloc(sizeof(float)*4 * n);
+	//Lista que se utilizara para hacer el headsort, donde n es la cantidad de listas
+	listaOffset listaHeap[n];
+	//Agrego el primer elemento de cada lista a listaHeap
+	for (int i=0,z=0;i<n, z<n/16;i=i+16,z++){
+		listaHeap[z].pos=i;
+		listaHeap[z].cantidadRestante=16;
+		listaHeap[z].valor=*(A+listaHeap[z].posActual());
+		//listaHeap[z].restaCantidad();
+		//total=total-1;
+		}
+
+	int cinta=n-1, tamlistaHeap=n/16;
+	n=n/16;
+
+	//Inicio el monticulo////////////////////////////////////
+	buildheap(listaHeap, tamlistaHeap);
+	int posValorMayor=0, valorPos=0;
+	while(total!=0){
+		//intercambio el root por el ultimo
+		swap(listaHeap[0], listaHeap[tamlistaHeap-1]);
+		heapify(listaHeap, tamlistaHeap-1, 0);
+		
+		//que pasa si no le queda valores?
+		if (listaHeap[tamlistaHeap-1].confirmaCantidad()==true){
+
+			//ignoro el ultimo, pues este es el mayor pero no tiene stock
+			tamlistaHeap=tamlistaHeap-1; // ++
+			heapify(listaHeap, tamlistaHeap-1, 0); //++
+			swap(listaHeap[0],listaHeap[tamlistaHeap-1]);
+			heapify(listaHeap, tamlistaHeap-1, 0); 
+					//obtengo el valor
+			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
+			listaHeap[tamlistaHeap-1].restaCantidad();
+			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
+			total=total-1;
+			cinta=cinta-1;
+			//actualizo su valor
+
+
+			/*for(int z=0;z<tamlistaHeap;z++){
+				if (listaHeap[z].confirmaCantidad()==false && listaHeap[z].pos>valorPos){
+					posValorMayor=z;
+					valorPos=listaHeap[z].pos;
+				}
+			}
+			//intercambio la posicion encontrada por el primero y disminuyo el tam real en 1 para ignorar el mayor sin stock
+			swap(listaHeap[0],listaHeap[posValorMayor]);
+			//heapify(listaHeap, tamlistaHeap-1, 0);
+			//tamlistaHeap=tamlistaHeap-1; --
+			valorPos=0;
+			posValorMayor=0;*/
+		}
+
+		else{
+		//obtengo el valor
+			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
+		listaHeap[tamlistaHeap-1].restaCantidad();
+		total=total-1;
+		cinta=cinta-1;
+			//actualizo su valor
+			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
+		}
+
+		buildheap(listaHeap, tamlistaHeap);
+	}
+
+	//////////////////////////////////////////////////////
+
+	//Copio los elementos restantes a A1
+	n=n*16;
+	//Por ultimo copio todos los valores de A1 a A
+
+	for (i =0; i < n; i++) {
+    	A[i] = A1[i];
+  	}
+
+	//////////////////////////////////////////////////////////////////////
+
+	//merge_sort(A, n*16);
+
+
+  	//loadSortKernel(A, A+4, A+8, A+12);
     return;}   
+   //cout <<"ciclos intermedios!! :" <<profundidad << endl;
   
   /* Se divide A a 2 arrays A1 y A2 */
   n1 = n / 2;   /* numero de elementos de A1 */
@@ -327,22 +565,23 @@ void merge_sort(float *A, int n) {
   for (i = 0; i < n2; i++) {
     A2[i] = A[i+n1];
   }
-
-#pragma omp parallel
+//una hebra declara las tareas, las otras 2 la ejecutan
+#pragma omp parallel num_threads(2)
 {
 #pragma omp single
 {
-#pragma omp task shared(A1) firstprivate(n1)
+#pragma omp task shared(A1) firstprivate(n1, profundidad)
 	{
-	merge_sort(A1, n1);}
+	merge_sort_openMP(A1, n1, profundidad-1);
+	}
   /* Llamada recursiva */
-	#pragma omp task shared(A2) firstprivate(n2)
+	#pragma omp task  shared(A2) firstprivate(n2, profundidad)
 			{
-  merge_sort(A2, n2);
+  merge_sort_openMP(A2, n2,profundidad-1);
 }
 
-}//fin section
-
+}//fin single
+#pragma omp taskwait
 }//fin pragma parallel
 
   /* Merge */
@@ -369,19 +608,20 @@ int isNumber(const string entradaConsola, int * entradaPrograma ){
 /* Una cadena que lista las opciones cortas válidas para getOpt
    Se inicia con : pues si falta algun argumento, enviara un caso tipo ":"" */
 
-const char* const opciones = "d:i:o:N:";
+const char* const opciones = "d:i:o:N:L:";
 
 //-i : archivo binario con la lista de entrada desordenados
 //-o : archivo binario de salida con la lista ordenada
 //-N : largo de la lista
 //-d : si debug es 0, no se imprime mensaje alguno por stdout, si es 1, se imprime la secuencia final, 1 por linea
+//-L : profundidad de division
 
 /* Declaracion de las banderas */
 
 int banderaErrorParametros=0, banderaErrorBanderas=0;
 
 //
-int bandera_i=0, bandera_N=0,bandera_o=0, bandera_d=0;
+int bandera_i=0, bandera_N=0,bandera_o=0, bandera_d=0, bandera_L=0;
 bool multiplo16=true;
 
 //Las banderas _i, _N, _o y _d: para asegurar que solo haya un argumento
@@ -392,7 +632,7 @@ int main (int argc, char **argv)
 {
 
 	string nombreEntrada, nombreSalida="outputSorted.txt"; //nombre de salida por defecto si no se especifica
-	int largoLista, debug=0, argumentoConsola;
+	int largoLista, debug=0,profundidad=0,argumentoConsola;
 
 	//////////// Analisis de entrada de la consola getOpt ///////////
 
@@ -449,6 +689,21 @@ int main (int argc, char **argv)
 					banderaErrorBanderas++;						
 					}
 					  break;
+			case 'L': if (bandera_L==0) { //archivo
+
+					  bandera_L++; 
+
+					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, &profundidad);
+					  //profundidad=int (pow (2, profundidad));
+					  if ( debug >1){
+					  	banderaErrorParametros++;
+					  }
+					}
+					else{
+					banderaErrorBanderas++;						
+					}
+					  break;
+
 
 					  case ':': banderaErrorParametros++; break;
 					  case '?': 
@@ -464,7 +719,6 @@ int main (int argc, char **argv)
 		}
 
 	/////////////////////////////////////////////////////////////////
-
 
 	//////////// Analisis de los argumentos obtenidos de getOpt ///////////
 
@@ -516,7 +770,7 @@ int main (int argc, char **argv)
 	}
 	*/
 	//largoLista * 16 ya que es la cantidad total de registros, y no la cantidad total de grupos de 16
-	merge_sort(line, largoLista*16);
+	merge_sort_openMP(line, largoLista*16, profundidad);
 
 	/////////////////////////////////////////////////////////////////
 
