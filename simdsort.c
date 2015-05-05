@@ -389,6 +389,19 @@ void loadSortKernel(float * a, float *b, float * c, float * d){
   }
 }  
 
+//Aplico el ordeniamieto SIMD a cada grupo de 16 buffers en el buffer de entrada "bufferDeEntrada"
+void ordenamientoSIMD(float **bufferDeEntrada, int n, int *total){
+	int offset;
+  	*total=0;
+  	//n=n/16;
+	for (int i=0;i<n;i++){
+		offset=i*16;
+		//A cada grupo de 16 se le aplica el sortKernel
+		loadSortKernel(*bufferDeEntrada+offset, *bufferDeEntrada+offset+4, *bufferDeEntrada+offset+8, *bufferDeEntrada+offset+12);
+		*total=*total+16;
+	}
+}
+
 void merge_sort_openMP(float *A, int n, int profundidad) {
   int i;
   float *A1, *A2;
@@ -398,23 +411,15 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
   // Cuando la cantidad de subniveles llega al limite
   if (profundidad==0) {
 
-  	//Aplico SIMD /////////////////////////////////////////////////////////
-  	int offset;
   	int total=0;
-  	n=n/16;
 
-	for (int i=0;i<n;i++){
-		offset=i*16;
-		//A cada grupo de 16 se le aplica el sortKernel
-		loadSortKernel(A+offset, A+offset+4, A+offset+8, A+offset+12);
-		total=total+16;
-	}
+  	//Aplico SIMD /////////////////////////////////////////////////////////
+  	ordenamientoSIMD(&A, n/16, &total);
 
 	///////////////////////////////////////////////////////////////////////
 	//Heapsort
 	///////////////////////////////////////////////////////////////////////
-	//Lista en donde se iran guardando los resultados
-	n=n*16;
+
 	A1 = (float*)malloc(sizeof(float)*4 * n);
 	//Lista que se utilizara para hacer el headsort, donde n es la cantidad de listas
 	listaOffset listaHeap[n];
@@ -669,7 +674,7 @@ while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErr
 	}
 
  return true;
-}
+}// Fin funcion recibeArgumentosConsola()
 
 
 int main (int argc, char **argv)
