@@ -544,38 +544,19 @@ int isNumber(const string entradaConsola, int * entradaPrograma ){
 	return 0;
 }
 
-/* Una cadena que lista las opciones cortas válidas para getOpt
-   Se inicia con : pues si falta algun argumento, enviara un caso tipo ":"" */
 
-const char* const opciones = "d:i:o:N:L:";
-
-//-i : archivo binario con la lista de entrada desordenados
-//-o : archivo binario de salida con la lista ordenada
-//-N : largo de la lista
-//-d : si debug es 0, no se imprime mensaje alguno por stdout, si es 1, se imprime la secuencia final, 1 por linea
-//-L : profundidad de division
+bool recibeArgumentosConsola(const char * opciones,int argc, char **argv, string *nombreEntrada, string *nombreSalida,int *largoLista, int *debug, int *profundidad){
 
 /* Declaracion de las banderas */
-
-int banderaErrorParametros=0, banderaErrorBanderas=0;
-
-//
-int bandera_i=0, bandera_N=0,bandera_o=0, bandera_d=0, bandera_L=0;
-bool multiplo16=true;
 
 //Las banderas _i, _N, _o y _d: para asegurar que solo haya un argumento
 //Por ejemplo; podria escribir por consola -i entrada1 -i entrada2
 //si pasa esto, se retornara un mensaje de error y se terminara la ejecucion
 
-int main (int argc, char **argv)
-{
+int banderaErrorParametros=0, banderaErrorBanderas=0, bandera_i=0, bandera_N=0,bandera_o=0, bandera_d=0, bandera_L=0, argumentoConsola;
+bool multiplo16=true;
 
-	string nombreEntrada, nombreSalida="outputSorted.txt"; //nombre de salida por defecto si no se especifica
-	int largoLista, debug=0,profundidad=0,argumentoConsola;
-
-	//////////// Analisis de entrada de la consola getOpt ///////////
-
-	while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErrorParametros==0 && banderaErrorBanderas==0){
+while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErrorParametros==0 && banderaErrorBanderas==0){
 		//No tiene caso seguir con el while, si se ha detectado una falla en el camino
 		switch (argumentoConsola){  
 
@@ -583,7 +564,7 @@ int main (int argc, char **argv)
 
 					  bandera_i++; 
 
-					  nombreEntrada=optarg;
+					  *nombreEntrada=optarg;
 
 					}
 					else{
@@ -592,8 +573,8 @@ int main (int argc, char **argv)
 					  break;	  
 			case 'N': if (bandera_N==0) {
 							    bandera_N++;
-							    banderaErrorParametros = banderaErrorParametros + isNumber(optarg, &largoLista );
-							    if (largoLista%16!=0){
+							    banderaErrorParametros = banderaErrorParametros + isNumber(optarg, largoLista );
+							    if (*largoLista%16!=0){
 							    	banderaErrorParametros++;
 							    	multiplo16=false;
 							    }
@@ -607,7 +588,7 @@ int main (int argc, char **argv)
 
 					  bandera_o++; 
 
-					  nombreSalida=optarg;
+					  *nombreSalida=optarg;
 
 					}
 					else{
@@ -619,8 +600,8 @@ int main (int argc, char **argv)
 
 					  bandera_d++; 
 
-					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, &debug);
-					  if ( debug >1){
+					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, debug);
+					  if ( *debug >1){
 					  	banderaErrorParametros++;
 					  }
 					}
@@ -632,11 +613,8 @@ int main (int argc, char **argv)
 
 					  bandera_L++; 
 
-					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, &profundidad);
+					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, profundidad);
 					  //profundidad=int (pow (2, profundidad));
-					  if ( debug >1){
-					  	banderaErrorParametros++;
-					  }
 					}
 					else{
 					banderaErrorBanderas++;						
@@ -663,17 +641,17 @@ int main (int argc, char **argv)
 
 	if (banderaErrorBanderas>0){
 		cout << "Error: una o más opciones estan duplicadas o no estan disponibles" << endl;
-		exit(1);
+		return false;
 	}
 
 	if (bandera_i==0){
 		cout << "Error: no se ha especificado archivo de entrada" << endl;
-		exit(1);
+		return false;
 	}
 
 	if (bandera_N==0){
 		cout << "Error: no se ha indicado el largo de la lista de entrada" << endl;
-		exit(1);
+		return false;
 	}
 
 	if (banderaErrorParametros>0){
@@ -681,16 +659,39 @@ int main (int argc, char **argv)
 		if (multiplo16==false){
 			cout << "Error: el largo de la lista especificado como argumento de la opcion -N" << endl;
 			cout << "No es divisible por 16" << endl;
-			exit(1);
+			return false;
 		}
 
 		else{
 		cout << "Error: uno o más argumentos de alguna de las opciones no son validos" << endl;
-		exit(1);
+		return false;
 		}
 	}
 
-	/////////////////////////////////////////////////////////////////
+ return true;
+}
+
+
+int main (int argc, char **argv)
+{
+
+	string nombreEntrada, nombreSalida="outputSorted.txt"; //nombre de salida por defecto si no se especifica
+	int largoLista, debug=0,profundidad=0;
+
+	/* Una cadena que lista las opciones cortas válidas para getOpt
+	Se inicia con : pues si falta algun argumento, enviara un caso tipo ":"" */
+
+	const char* const opciones = "d:i:o:N:L:";
+
+	//-i : archivo binario con la lista de entrada desordenados
+	//-o : archivo binario de salida con la lista ordenada
+	//-N : largo de la lista
+	//-d : si debug es 0, no se imprime mensaje alguno por stdout, si es 1, se imprime la secuencia final, 1 por linea
+	//-L : profundidad de division
+
+	if (recibeArgumentosConsola(opciones,argc, argv, &nombreEntrada, &nombreSalida,&largoLista, &debug, &profundidad) ==false){
+		exit(1);
+	}
 
 	////////////////MultiWay Merge Sort OPEN_MP//////////////////////////////
 
