@@ -52,19 +52,13 @@ using namespace std;
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct listaOffset{
-	int pos;
-	int cantidadRestante;
-	float valor;
-	//listaOffset(int pos);
-	void restaCantidad();
-	int posActual();
-	bool confirmaCantidad();
+	int pos; //indica el offset
+	int cantidadRestante; //indica la cantidad restante de numeros que puede tomar del buffer de entrada
+	float valor; //indica el valor actual que presenta a partir del offset asignado actual 
+	void restaCantidad(); //disminuye en uno la cantidad restante
+	int posActual(); //indica el offset actual dependiendo de la cantidadRestante
+	bool confirmaCantidad(); //verifica si la cantidad restante es 0 o no
 };
-
-/*listaOffset::listaOffset(int posActual){
-	pos=posActual;
-	cantidadRestante=16; //La minima lista es de 16 elementos
-}*/
 
 void listaOffset::restaCantidad(){
 	cantidadRestante=cantidadRestante-1;
@@ -91,6 +85,8 @@ bool listaOffset::confirmaCantidad(){
 //Heapsort																							//
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+//Intercambia de pos 2 datos del tipo listaOffset
 void swap(listaOffset& x, listaOffset& y)
 {
 	listaOffset temp;
@@ -100,8 +96,8 @@ void swap(listaOffset& x, listaOffset& y)
 	y = temp;
 }
 
-void heapify(listaOffset A[], int heapsize, int root) //(takes O(h) time,
-					// h is the height of root
+void filterUp(listaOffset A[], int heapsize, int root)
+
 {
 	int left = 2*root+1, 
 		right = 2*root +2,
@@ -118,29 +114,30 @@ void heapify(listaOffset A[], int heapsize, int root) //(takes O(h) time,
 	if (largest != root)
 	{
 		swap(A[root], A[largest]);
-		heapify(A, heapsize, largest);
+		filterUp(A, heapsize, largest);
 	}
 }
 
-void buildheap(listaOffset A[], int length)	//     (takes O(n) time)
+void formaHeap(listaOffset A[], int length)
 {	
 	for (int i = floor((length)/2); i >= 0 ; i--)
-		heapify(A, length, i);
+		filterUp(A, length, i);
 }
 
-
-void heapsort(listaOffset A[], int length)//	       (takes O(n lg n) time)
+/* No se utiliza
+void heapsort(listaOffset A[], int length)
 {
 	int heapsize = length;
 	
-	buildheap(A, length);	//Take the unsorted list and make it a heap
+	formaHeap(A, length);
 	for (int i = length-1; i >=1; i--)
 	{
 		swap(A[0], A[i]);
 		heapsize--;
-		heapify(A, heapsize, 0);		
+		filterUp(A, heapsize, 0);		
 	}
-}
+}*/
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //Funcion que escribe en un archivo de salida de nombre 'nombreSalida'
@@ -172,29 +169,13 @@ float * sysReadAligned(string nombreEntrada, int * readSize){
 		}
 
 	else{
-		//En un principio se obtenia el tamaño total del archivo usando fstat
-		//struct stat buf;
-		//fstat(fd, &buf);
-		//*size = buf.st_size;
-
-		//Ahora la validacion se hace en el getopt
-		/*if (*size%16 !=0){
-			cout << "Error: cantidad de datos invalidos (no es multiplo de 16)" << endl;
-			exit(1);
-		}*/
-
-		//else{
-			//float line[size];
-			//float *line=(float *) malloc(*size);
 			float *line;
 			//size de lectura * 4 pues cada elemento de la lista se compone de 4 bytes
 			posix_memalign((void**)&line, 16, *readSize*4);
 			read(fd, line, *readSize*4);
 			close(fd);
 			//cada registro contiene 4 numero flotantes
-			//*size=*size/4;
 			return line;
-		//}
 	}
 }
 
@@ -417,15 +398,17 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
   	ordenamientoSIMD(&A, n/16, &total);
 
 	///////////////////////////////////////////////////////////////////////
-	//Heapsort
+	//Heap-based Multiway Merge Sort
 	///////////////////////////////////////////////////////////////////////
 
+  	//Lista auxiliar que se utilizara para el ordenamiento Heap-based Multiway
+  	cout << "N=" <<n<< endl; //Revisar esto!!
 	A1 = (float*)malloc(sizeof(float)*4 * n);
-	//Lista que se utilizara para hacer el headsort, donde n es la cantidad de listas
+	//Lista que guarda el offset de cada grupo de 16 elementos del buffer de entrada A
 	listaOffset listaHeap[n];
-
+	//
 	//Agrego el primer elemento de cada lista a listaHeap
-	for (int i=0,z=0;i<n, z<n/16;i=i+16,z++){
+	for (int i=0,z=0;i<n;i=i+16,z++){
 		listaHeap[z].pos=i;
 		listaHeap[z].cantidadRestante=16;
 		listaHeap[z].valor=*(A+listaHeap[z].posActual());
@@ -434,7 +417,7 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 	int cinta=n-1, tamlistaHeap=n/16;
 	n=n/16;
 	//Inicio el monticulo////////////////////////////////////
-	buildheap(listaHeap, tamlistaHeap);
+	formaHeap(listaHeap, tamlistaHeap);
 	////////////////////////////////////////////////////////
 
 	//Mientras no se agreguen todos los elementos a la lista temporal A1
@@ -442,7 +425,7 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 
 		//intercambio el root por el ultimo
 		swap(listaHeap[0], listaHeap[tamlistaHeap-1]);
-		heapify(listaHeap, tamlistaHeap-1, 0);
+		filterUp(listaHeap, tamlistaHeap-1, 0);
 		
 		//que pasa si no le queda valores?
 		if (listaHeap[tamlistaHeap-1].confirmaCantidad()==true){
@@ -451,7 +434,7 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 			tamlistaHeap=tamlistaHeap-1; // ++
 			//Intercambio el root por el ultimo
 			swap(listaHeap[0],listaHeap[tamlistaHeap-1]);
-			heapify(listaHeap, tamlistaHeap-1, 0);
+			filterUp(listaHeap, tamlistaHeap-1, 0);
 			//obtengo el valor y lo guardo en A1
 			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
 			//Actualizo offset
@@ -473,17 +456,21 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
 		}
 
-		buildheap(listaHeap, tamlistaHeap);
+		formaHeap(listaHeap, tamlistaHeap);
 	}
 
 	///////////////////////////////////////////////////////////////////////
 
 	n=n*16;
+
 	//Por ultimo copio todos los valores de A1 a A
 
 	for (i =0; i < n; i++) {
     	A[i] = A1[i];
   	}
+
+  	free(A1);
+  	free(A2);
 
   	///////////////////////////////////////////////////////////////////////
 
@@ -708,7 +695,6 @@ int main (int argc, char **argv)
 	merge_sort_openMP(line, largoLista*16, profundidad);
 
 	/////////////////////////////////////////////////////////////////
-
 	//Debug
 	if (debug==1){
 		for (int i=0; i<largoLista*16; i++){
