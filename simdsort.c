@@ -544,6 +544,7 @@ bool recibeArgumentosConsola(const char * opciones,int argc, char **argv, string
 
 	while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErrorParametros==0 && banderaErrorBanderas==0){
 		//No tiene caso seguir con el while, si se ha detectado una falla en el camino
+		//Los casos estan declarados explicitamente, y no analizando debidamente tal la entrada * opciones
 		switch (argumentoConsola){  
 
 			case 'i': if (bandera_i==0) { //archivo entrada
@@ -595,7 +596,7 @@ bool recibeArgumentosConsola(const char * opciones,int argc, char **argv, string
 					  banderaErrorBanderas++;						
 				  }
 				  break;
-			case 'L': if (bandera_L==0) { //archivo
+			case 'l': if (bandera_L==0) { //archivo
 
 					  bandera_L++; 
 
@@ -667,13 +668,13 @@ int main (int argc, char **argv)
 	/* Una cadena que lista las opciones cortas válidas para getOpt
 	   Se inicia con : pues si falta algun argumento, enviara un caso tipo ":"" */
 
-	const char* const opciones = "d:i:o:N:L:";
+	const char* const opciones = "d:i:o:N:l:";
 
 	//-i : archivo binario con la lista de entrada desordenados
 	//-o : archivo binario de salida con la lista ordenada
 	//-N : largo de la lista
 	//-d : si debug es 0, no se imprime mensaje alguno por stdout, si es 1, se imprime la secuencia final, 1 por linea
-	//-L : profundidad de division
+	//-l : profundidad de division
 
 	if (recibeArgumentosConsola(opciones,argc, argv, &nombreEntrada, &nombreSalida,&largoLista, &debug, &profundidad) ==false){
 		exit(1);
