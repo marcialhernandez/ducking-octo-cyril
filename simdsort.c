@@ -370,19 +370,9 @@ void  merge(float *A, int a, float *B, int b, float *C) {
 	}
 }  
 
-//Aplico el ordeniamieto SIMD a cada grupo de 16 buffers en el buffer de entrada "bufferDeEntrada"
-void ordenamientoSIMD(float **bufferDeEntrada, int n, int *total){
-	int offset;
-	*total=0;
-	//n=n/16;
-	for (int i=0;i<n;i++){
-		offset=i*16;
-		//A cada grupo de 16 se le aplica el sortKernel
-		loadSortKernel(*bufferDeEntrada+offset, *bufferDeEntrada+offset+4, *bufferDeEntrada+offset+8, *bufferDeEntrada+offset+12);
-		*total=*total+16;
-	}
-}
-
+//Funcion que subidivide el problema en tareas de tam n/2, dependiendo de la profundidad de entrada
+//Cuando la profundidad es 0, se realiza un Heap-Based Merge sort y al final se van juntando todas las parte
+//mediante Merge simples
 void merge_sort_openMP(float *A, int n, int profundidad) {
 	int i;
 	float *A1, *A2;
@@ -394,9 +384,6 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 
 		int total=0;
 
-		//Aplico SIMD /////////////////////////////////////////////////////////
-		ordenamientoSIMD(&A, n/16, &total);
-
 		///////////////////////////////////////////////////////////////////////
 		//Heap-based Multiway Merge Sort
 		///////////////////////////////////////////////////////////////////////
@@ -407,10 +394,13 @@ void merge_sort_openMP(float *A, int n, int profundidad) {
 		//listaOffset listaHeap[n/16];
 		listaOffset *listaHeap=(listaOffset*)malloc(sizeof(listaOffset)* (n/16));
 		//
-		//Agrego el primer elemento de cada lista a listaHeap
 		for (int i=0,z=0;i<n;i=i+16,z++){
 			listaHeap[z].pos=i;
 			listaHeap[z].cantidadRestante=16;
+			total=total+16;
+			//Aplico el ordeniamieto SIMD a cada grupo de 16 buffers en el buffer de entrada "A"
+			loadSortKernel(A+i, A+i+4, A+i+8, A+i+12);
+			//Agrego el primer elemento de cada lista a listaHeap
 			listaHeap[z].valor=*(A+listaHeap[z].posActual());
 		}
 
