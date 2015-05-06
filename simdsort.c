@@ -37,7 +37,7 @@
 #include <cstdlib>
 #include <math.h>
 #include <vector>
- //OpenMP
+//OpenMP
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -90,7 +90,7 @@ bool listaOffset::confirmaCantidad(){
 void swap(listaOffset& x, listaOffset& y)
 {
 	listaOffset temp;
-	
+
 	temp = x;
 	x = y;
 	y = temp;
@@ -100,17 +100,17 @@ void filterUp(listaOffset A[], int heapsize, int root)
 
 {
 	int left = 2*root+1, 
-		right = 2*root +2,
-		largest;
-	
+	    right = 2*root +2,
+	    largest;
+
 	if ( (left < heapsize) && (A[left].valor > A[root].valor))
 		largest = left;
 	else 
 		largest = root;
-	
+
 	if ( (right < heapsize) && (A[right].valor > A[largest].valor))
 		largest = right;
-		
+
 	if (largest != root)
 	{
 		swap(A[root], A[largest]);
@@ -125,18 +125,18 @@ void formaHeap(listaOffset A[], int length)
 }
 
 /* No se utiliza
-void heapsort(listaOffset A[], int length)
-{
-	int heapsize = length;
-	
-	formaHeap(A, length);
-	for (int i = length-1; i >=1; i--)
-	{
-		swap(A[0], A[i]);
-		heapsize--;
-		filterUp(A, heapsize, 0);		
-	}
-}*/
+   void heapsort(listaOffset A[], int length)
+   {
+   int heapsize = length;
+
+   formaHeap(A, length);
+   for (int i = length-1; i >=1; i--)
+   {
+   swap(A[0], A[i]);
+   heapsize--;
+   filterUp(A, heapsize, 0);		
+   }
+   }*/
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -145,11 +145,11 @@ void heapsort(listaOffset A[], int length)
 void sysWrite(string nombreSalida, float * bufferAEscribir, int nBytesToWrite){
 	int fd = open(nombreSalida.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if ( fd <0)
-		{
-			cout << "Error: no se puede abrir el archivo de Salida" << endl;
-			cout << strerror(errno) << endl;
-			exit(1);
-		}
+	{
+		cout << "Error: no se puede abrir el archivo de Salida" << endl;
+		cout << strerror(errno) << endl;
+		exit(1);
+	}
 
 	else{
 		write(  fd, bufferAEscribir, nBytesToWrite);
@@ -162,20 +162,20 @@ void sysWrite(string nombreSalida, float * bufferAEscribir, int nBytesToWrite){
 float * sysReadAligned(string nombreEntrada, int * readSize){
 	int fd = open(nombreEntrada.c_str(), O_RDONLY);
 	if ( (fd = open(nombreEntrada.c_str(), O_RDONLY) ) == -1)
-		{
-			cout << "Error: no se puede abrir el archivo" << endl;
-			cout << strerror(errno) << endl;
-			exit(1);
-		}
+	{
+		cout << "Error: no se puede abrir el archivo" << endl;
+		cout << strerror(errno) << endl;
+		exit(1);
+	}
 
 	else{
-			float *line;
-			//size de lectura * 4 pues cada elemento de la lista se compone de 4 bytes
-			posix_memalign((void**)&line, 16, *readSize*4);
-			read(fd, line, *readSize*4);
-			close(fd);
-			//cada registro contiene 4 numero flotantes
-			return line;
+		float *line;
+		//size de lectura * 4 pues cada elemento de la lista se compone de 4 bytes
+		posix_memalign((void**)&line, 16, *readSize*4);
+		read(fd, line, *readSize*4);
+		close(fd);
+		//cada registro contiene 4 numero flotantes
+		return line;
 	}
 }
 
@@ -184,10 +184,10 @@ float * sysReadAligned(string nombreEntrada, int * readSize){
 float * sysRead(string nombreEntrada, int * size){
 	int fd = open(nombreEntrada.c_str(), O_RDONLY);
 	if ( (fd = open(nombreEntrada.c_str(), O_RDONLY) ) == -1)
-		{
-			cout << "Error: no se puede abrir el archivo" << endl;
-			exit(1);
-		}
+	{
+		cout << "Error: no se puede abrir el archivo" << endl;
+		exit(1);
+	}
 
 	else{
 		struct stat buf;
@@ -308,7 +308,7 @@ void mergeSIMD(__m128 * entrada1,__m128 * entrada2, __m128 * entrada3,__m128 * e
 
 void sortKernel(__m128 * entrada1,__m128 * entrada2, __m128 * entrada3,__m128 * entrada4){
 	inRegisterSort(entrada1,entrada2,entrada3,entrada4);
-//Luego se obtienen 2 conjuntos (de 8) ordenados usando la BMN 2 veces
+	//Luego se obtienen 2 conjuntos (de 8) ordenados usando la BMN 2 veces
 	secondReverseBMN(entrada1, entrada2);
 	secondReverseBMN(entrada3, entrada4);
 	//Luego se utiliza MergeSimd con los dos conjuntos de 8
@@ -337,44 +337,44 @@ void loadSortKernel(float * a, float *b, float * c, float * d){
  * Funcion Merge generica
  **/
 
- void  merge(float *A, int a, float *B, int b, float *C) {
-  int i,j,k;
-  i = 0; 
-  j = 0;
-  k = 0;
-  while (i < a && j < b) {
-    if (A[i] <= B[j]) {
-	  /* Copia A[i] a C[k]*/
-	  C[k] = A[i];
-	  i++;
-	  k++;
-    }
-    else {
-      /* Copia B[j] a C[k]*/
-      C[k] = B[j];
-      j++;
-      k++;
-    }
-  }
-  /* Mueve los elementos restantes de A a C*/
-  while (i < a) {
-    C[k]= A[i];
-    i++;
-    k++;
-  }
-  /* Mueve los elementos restantes de B a C */
-  while (j < b)  {
-    C[k]= B[j];
-    j++;
-    k++;
-  }
+void  merge(float *A, int a, float *B, int b, float *C) {
+	int i,j,k;
+	i = 0; 
+	j = 0;
+	k = 0;
+	while (i < a && j < b) {
+		if (A[i] <= B[j]) {
+			/* Copia A[i] a C[k]*/
+			C[k] = A[i];
+			i++;
+			k++;
+		}
+		else {
+			/* Copia B[j] a C[k]*/
+			C[k] = B[j];
+			j++;
+			k++;
+		}
+	}
+	/* Mueve los elementos restantes de A a C*/
+	while (i < a) {
+		C[k]= A[i];
+		i++;
+		k++;
+	}
+	/* Mueve los elementos restantes de B a C */
+	while (j < b)  {
+		C[k]= B[j];
+		j++;
+		k++;
+	}
 }  
 
 //Aplico el ordeniamieto SIMD a cada grupo de 16 buffers en el buffer de entrada "bufferDeEntrada"
 void ordenamientoSIMD(float **bufferDeEntrada, int n, int *total){
 	int offset;
-  	*total=0;
-  	//n=n/16;
+	*total=0;
+	//n=n/16;
 	for (int i=0;i<n;i++){
 		offset=i*16;
 		//A cada grupo de 16 se le aplica el sortKernel
@@ -384,141 +384,145 @@ void ordenamientoSIMD(float **bufferDeEntrada, int n, int *total){
 }
 
 void merge_sort_openMP(float *A, int n, int profundidad) {
-  int i;
-  float *A1, *A2;
-  int n1, n2;
+	int i;
+	float *A1, *A2;
+	int n1, n2;
 
 
-  // Cuando la cantidad de subniveles llega al limite
-  if (profundidad==0) {
+	// Cuando la cantidad de subniveles llega al limite
+	if (profundidad==0) {
 
-  	int total=0;
+		int total=0;
 
-  	//Aplico SIMD /////////////////////////////////////////////////////////
-  	ordenamientoSIMD(&A, n/16, &total);
+		//Aplico SIMD /////////////////////////////////////////////////////////
+		ordenamientoSIMD(&A, n/16, &total);
 
-	///////////////////////////////////////////////////////////////////////
-	//Heap-based Multiway Merge Sort
-	///////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////
+		//Heap-based Multiway Merge Sort
+		///////////////////////////////////////////////////////////////////////
 
-  	//Lista auxiliar que se utilizara para el ordenamiento Heap-based Multiway
-  	cout << "N=" <<n<< endl; //Revisar esto!!
-	A1 = (float*)malloc(sizeof(float)*4 * n);
-	//Lista que guarda el offset de cada grupo de 16 elementos del buffer de entrada A
-	listaOffset listaHeap[n];
-	//
-	//Agrego el primer elemento de cada lista a listaHeap
-	for (int i=0,z=0;i<n;i=i+16,z++){
-		listaHeap[z].pos=i;
-		listaHeap[z].cantidadRestante=16;
-		listaHeap[z].valor=*(A+listaHeap[z].posActual());
+		//A1 = (float*)malloc(sizeof(float)* n);
+		//posix_memalign((void**)&A1, 16, n*4);
+		//Lista que guarda el offset de cada grupo de 16 elementos del buffer de entrada A
+		//listaOffset listaHeap[n/16];
+		listaOffset *listaHeap=(listaOffset*)malloc(sizeof(listaOffset)* (n/16));
+		//
+		//Agrego el primer elemento de cada lista a listaHeap
+		for (int i=0,z=0;i<n;i=i+16,z++){
+			listaHeap[z].pos=i;
+			listaHeap[z].cantidadRestante=16;
+			listaHeap[z].valor=*(A+listaHeap[z].posActual());
 		}
 
-	int cinta=n-1, tamlistaHeap=n/16;
-	n=n/16;
-	//Inicio el monticulo////////////////////////////////////
-	formaHeap(listaHeap, tamlistaHeap);
-	////////////////////////////////////////////////////////
-
-	//Mientras no se agreguen todos los elementos a la lista temporal A1
-	while(total!=0){
-
-		//intercambio el root por el ultimo
-		swap(listaHeap[0], listaHeap[tamlistaHeap-1]);
-		filterUp(listaHeap, tamlistaHeap-1, 0);
-		
-		//que pasa si no le queda valores?
-		if (listaHeap[tamlistaHeap-1].confirmaCantidad()==true){
-
-			//ignoro el ultimo, pues este es el mayor pero no tiene stock
-			tamlistaHeap=tamlistaHeap-1; // ++
-			//Intercambio el root por el ultimo
-			swap(listaHeap[0],listaHeap[tamlistaHeap-1]);
-			filterUp(listaHeap, tamlistaHeap-1, 0);
-			//obtengo el valor y lo guardo en A1
-			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
-			//Actualizo offset
-			listaHeap[tamlistaHeap-1].restaCantidad();
-			//Actualizo valor
-			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
-			total=total-1;
-			cinta=cinta-1;
-
-		}
-
-		else{
-		//obtengo el valor
-			A1[cinta]=listaHeap[tamlistaHeap-1].valor;
-			listaHeap[tamlistaHeap-1].restaCantidad();
-			total=total-1;
-			cinta=cinta-1;
-			//actualizo su valor
-			listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
-		}
-
+		int cinta=n-1, tamlistaHeap=n/16;
+		//posix_memalign((void**)&A1, 16, cinta*4);
+		A1 = (float*)malloc(sizeof(float)* n);
+		n=n/16;
+		//Inicio el monticulo////////////////////////////////////
 		formaHeap(listaHeap, tamlistaHeap);
+		////////////////////////////////////////////////////////
+
+		//Mientras no se agreguen todos los elementos a la lista temporal A1
+		while(total!=0){
+
+			//intercambio el root por el ultimo
+			swap(listaHeap[0], listaHeap[tamlistaHeap-1]);
+			filterUp(listaHeap, tamlistaHeap-1, 0);
+
+			//que pasa si no le queda valores?
+			if (listaHeap[tamlistaHeap-1].confirmaCantidad()==true){
+
+				//ignoro el ultimo, pues este es el mayor pero no tiene stock
+				tamlistaHeap=tamlistaHeap-1; // ++
+				//Intercambio el root por el ultimo
+				swap(listaHeap[0],listaHeap[tamlistaHeap-1]);
+				filterUp(listaHeap, tamlistaHeap-1, 0);
+				//obtengo el valor y lo guardo en A1
+				A1[cinta]=listaHeap[tamlistaHeap-1].valor;
+				//Actualizo offset
+				listaHeap[tamlistaHeap-1].restaCantidad();
+				//Actualizo valor
+				listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
+				total=total-1;
+				cinta=cinta-1;
+
+			}
+
+			else{
+				//obtengo el valor
+				A1[cinta]=listaHeap[tamlistaHeap-1].valor;
+				listaHeap[tamlistaHeap-1].restaCantidad();
+				total=total-1;
+				cinta=cinta-1;
+				//actualizo su valor
+				listaHeap[tamlistaHeap-1].valor=*(A+listaHeap[tamlistaHeap-1].posActual());
+			}
+
+			formaHeap(listaHeap, tamlistaHeap);
+		}
+
+		///////////////////////////////////////////////////////////////////////
+
+		n=n*16;
+
+		//Por ultimo copio todos los valores de A1 a A
+
+		for (i =0; i < n; i++) {
+			A[i] = A1[i];
+		}
+
+		free(A1);
+		free(listaHeap);
+
+		///////////////////////////////////////////////////////////////////////
+
+		return;}   
+
+
+	/* Se divide A a 2 arrays A1 y A2 */
+	n1 = n / 2;   /* numero de elementos de A1 */
+	n2 = n - n1;  /* numero de elementos de A2 */
+
+
+	//Se multiplica por 4 para que queden alineados a 16
+	//A1 = (float*)malloc(sizeof(float) * n1);
+	posix_memalign((void**)&A1, 16, n1*4);
+	posix_memalign((void**)&A2, 16, n2*4);
+	//A2 = (float*)malloc(sizeof(float) * n2);
+
+	/* Se mueve la primera mitad a A1 */
+	for (i =0; i < n1; i++) {
+		A1[i] = A[i];
+	}
+	/* el resto a A2*/
+	for (i = 0; i < n2; i++) {
+		A2[i] = A[i+n1];
 	}
 
-	///////////////////////////////////////////////////////////////////////
-
-	n=n*16;
-
-	//Por ultimo copio todos los valores de A1 a A
-
-	for (i =0; i < n; i++) {
-    	A[i] = A1[i];
-  	}
-
-  	free(A1);
-  	free(A2);
-
-  	///////////////////////////////////////////////////////////////////////
-
-    return;}   
-
-  
-  /* Se divide A a 2 arrays A1 y A2 */
-  n1 = n / 2;   /* numero de elementos de A1 */
-  n2 = n - n1;  /* numero de elementos de A2 */
-
-
-  //Se multiplica por 4 para que queden alineados a 16
-  A1 = (float*)malloc(sizeof(float)*4 * n1);
-  A2 = (float*)malloc(sizeof(float)*4 * n2);
-  
-  /* Se mueve la primera mitad a A1 */
-  for (i =0; i < n1; i++) {
-    A1[i] = A[i];
-  }
-  /* el resto a A2*/
-  for (i = 0; i < n2; i++) {
-    A2[i] = A[i+n1];
-  }
-
-//Declaracion de zona paralela con 2 hebras
+	//Declaracion de zona paralela con 2 hebras
 #pragma omp parallel num_threads(2)
-{
-//Declaracion de task
-#pragma omp single
-{
-	//Se subdivide el problema en 2 tareas recursivas
-#pragma omp task shared(A1) firstprivate(n1, profundidad)
 	{
-	merge_sort_openMP(A1, n1, profundidad-1);
-	}
-	#pragma omp task  shared(A2) firstprivate(n2, profundidad)
+		//Declaracion de task
+#pragma omp single
+		{
+			//Se subdivide el problema en 2 tareas recursivas
+#pragma omp task shared(A1) firstprivate(n1, profundidad)
 			{
-  merge_sort_openMP(A2, n2,profundidad-1);
-}
+				merge_sort_openMP(A1, n1, profundidad-1);
+			}
+#pragma omp task  shared(A2) firstprivate(n2, profundidad)
+			{
+				merge_sort_openMP(A2, n2,profundidad-1);
+			}
 
-}//fin single
+		}//fin single
 #pragma omp taskwait
-}//fin zona paralela
+	}//fin zona paralela
 
-  /* Merge */
-  merge(A1, n1, A2, n2, A);
-  free(A1);
-  free(A2);
+	/* Merge */
+	merge(A1, n1, A2, n2, A);
+	free(A1);
+	free(A2);
 }
 
 //Valida que la entrada sea numerica
@@ -539,16 +543,16 @@ int isNumber(const string entradaConsola, int * entradaPrograma ){
 
 bool recibeArgumentosConsola(const char * opciones,int argc, char **argv, string *nombreEntrada, string *nombreSalida,int *largoLista, int *debug, int *profundidad){
 
-/* Declaracion de las banderas */
+	/* Declaracion de las banderas */
 
-//Las banderas _i, _N, _o y _d: para asegurar que solo haya un argumento
-//Por ejemplo; podria escribir por consola -i entrada1 -i entrada2
-//si pasa esto, se retornara un mensaje de error y se terminara la ejecucion
+	//Las banderas _i, _N, _o y _d: para asegurar que solo haya un argumento
+	//Por ejemplo; podria escribir por consola -i entrada1 -i entrada2
+	//si pasa esto, se retornara un mensaje de error y se terminara la ejecucion
 
-int banderaErrorParametros=0, banderaErrorBanderas=0, bandera_i=0, bandera_N=0,bandera_o=0, bandera_d=0, bandera_L=0, argumentoConsola;
-bool multiplo16=true;
+	int banderaErrorParametros=0, banderaErrorBanderas=0, bandera_i=0, bandera_N=0,bandera_o=0, bandera_d=0, bandera_L=0, argumentoConsola;
+	bool multiplo16=true;
 
-while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErrorParametros==0 && banderaErrorBanderas==0){
+	while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErrorParametros==0 && banderaErrorBanderas==0){
 		//No tiene caso seguir con el while, si se ha detectado una falla en el camino
 		switch (argumentoConsola){  
 
@@ -558,23 +562,23 @@ while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErr
 
 					  *nombreEntrada=optarg;
 
-					}
-					else{
-					banderaErrorBanderas++;						
-					}
-					  break;	  
+				  }
+				  else{
+					  banderaErrorBanderas++;						
+				  }
+				  break;	  
 			case 'N': if (bandera_N==0) {
-							    bandera_N++;
-							    banderaErrorParametros = banderaErrorParametros + isNumber(optarg, largoLista );
-							    if (*largoLista%16!=0){
-							    	banderaErrorParametros++;
-							    	multiplo16=false;
-							    }
-						    }              
-						    else {
-							    banderaErrorBanderas++;
-						    }
-						    break;
+					  bandera_N++;
+					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, largoLista );
+					  if (*largoLista%16!=0){
+						  banderaErrorParametros++;
+						  multiplo16=false;
+					  }
+				  }              
+				  else {
+					  banderaErrorBanderas++;
+				  }
+				  break;
 
 			case 'o': if (bandera_o==0) { //archivo salida
 
@@ -582,11 +586,11 @@ while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErr
 
 					  *nombreSalida=optarg;
 
-					}
-					else{
-					banderaErrorBanderas++;						
-					}
-					  break;
+				  }
+				  else{
+					  banderaErrorBanderas++;						
+				  }
+				  break;
 
 			case 'd': if (bandera_d==0) { //archivo
 
@@ -594,38 +598,38 @@ while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErr
 
 					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, debug);
 					  if ( *debug >1){
-					  	banderaErrorParametros++;
+						  banderaErrorParametros++;
 					  }
-					}
-					else{
-					banderaErrorBanderas++;						
-					}
-					  break;
+				  }
+				  else{
+					  banderaErrorBanderas++;						
+				  }
+				  break;
 			case 'L': if (bandera_L==0) { //archivo
 
 					  bandera_L++; 
 
 					  banderaErrorParametros = banderaErrorParametros + isNumber(optarg, profundidad);
 					  //profundidad=int (pow (2, profundidad));
-					}
-					else{
-					banderaErrorBanderas++;						
-					}
-					  break;
-
-
-					  case ':': banderaErrorParametros++; break;
-					  case '?': 
-						    if ((optopt=='i' || optopt=='o' || optopt=='N' || optopt=='d' || optopt=='t')){
-							    banderaErrorParametros++;
-						    }
-						    else{
-							    banderaErrorBanderas++;
-						    }
-						    break;
-					  default: banderaErrorBanderas++; break;
 				  }
+				  else{
+					  banderaErrorBanderas++;						
+				  }
+				  break;
+
+
+			case ':': banderaErrorParametros++; break;
+			case '?': 
+				  if ((optopt=='i' || optopt=='o' || optopt=='N' || optopt=='d' || optopt=='t')){
+					  banderaErrorParametros++;
+				  }
+				  else{
+					  banderaErrorBanderas++;
+				  }
+				  break;
+			default: banderaErrorBanderas++; break;
 		}
+	}
 
 	/////////////////////////////////////////////////////////////////
 
@@ -655,12 +659,12 @@ while (((argumentoConsola = getopt (argc, argv, opciones)) != -1) &&  banderaErr
 		}
 
 		else{
-		cout << "Error: uno o más argumentos de alguna de las opciones no son validos" << endl;
-		return false;
+			cout << "Error: uno o más argumentos de alguna de las opciones no son validos" << endl;
+			return false;
 		}
 	}
 
- return true;
+	return true;
 }// Fin funcion recibeArgumentosConsola()
 
 
@@ -671,7 +675,7 @@ int main (int argc, char **argv)
 	int largoLista, debug=0,profundidad=0;
 
 	/* Una cadena que lista las opciones cortas válidas para getOpt
-	Se inicia con : pues si falta algun argumento, enviara un caso tipo ":"" */
+	   Se inicia con : pues si falta algun argumento, enviara un caso tipo ":"" */
 
 	const char* const opciones = "d:i:o:N:L:";
 
@@ -705,7 +709,7 @@ int main (int argc, char **argv)
 	//Se escribe en el archivo de salida
 	//Considerar que el tamaño es cantidad de grupos de registros, por cantidad de grupos, por cantidad de bytes de cada registro
 	sysWrite(nombreSalida, &*line, largoLista*16*4);
-	
+
 	return 0;
 
 }
